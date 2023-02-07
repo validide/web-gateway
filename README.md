@@ -30,6 +30,13 @@ Create an `environment-configuration.json` configuration with your setting. See 
             "PathRemovePrefix": "/.http-bin-debug"
           }
         ]
+      },
+      "host_aaaaa_or_bbbbb_route": {
+        "ClusterId": "aaaaa_or_bbbbb_cluster",
+        "Match": {
+          "Path": "{**catch-all}",
+          "Hosts" : [ "www.aaaaa.com", "www.bbbbb.com"],
+        }
       }
     },
     "Clusters": {
@@ -37,6 +44,13 @@ Create an `environment-configuration.json` configuration with your setting. See 
         "Destinations": {
           "httpbin.org": {
             "Address": "https://httpbin.org/"
+          }
+        }
+      },
+      "aaaaa_or_bbbbb_cluster": {
+        "Destinations": {
+          "aaaaa_or_bbbbb_host": {
+            "Address": "http://aaaaa_or_bbbbb_host:8080/"
           }
         }
       }
