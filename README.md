@@ -1,6 +1,11 @@
 # web-gateway
 Web Gateway
 
+A simple reverse proxy with HTTPS support built on top of:
+* [Microsoft YARP](https://github.com/microsoft/reverse-proxy)
+* [LettuceEncrypt](https://github.com/natemcmaster/LettuceEncrypt)
+
+
 ## Run the gateway
 
 Create an `environment-configuration.json` configuration with your setting. See the sample below:
@@ -63,7 +68,7 @@ Start a new container.
 
 ``` sh
 docker run -p 9080:80 -p 9443:443 \
-  -v $(pwd)environment-configuration.json:/app/environment-configuration.json \
+  -v $(pwd)/environment-configuration.json:/app/environment-configuration.json \
   -v /some/path-to-keep/secrets:/app_data \
   web-gateway:2023.02
 ```
