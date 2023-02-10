@@ -85,5 +85,5 @@ curl -X GET "https://your.domain.com/.http-bin-debug/get" -H "accept: applicatio
 ## Build
 
 ``` sh
-docker build -t validide/web-gateway:2023.02.1 -f build.dockerfile .
+docker build -t validide/web-gateway:2023.02.2 -f build.dockerfile .
 ```

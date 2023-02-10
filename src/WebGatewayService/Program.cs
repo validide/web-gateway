@@ -1,20 +1,30 @@
 ﻿using LettuceEncrypt;
 using Serilog;
+using Serilog.Events;
 
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .CreateLogger();
 try
 {
-    Log.Information("Starting web gateway");
+    Console.WriteLine("Starting web gateway");
     var builder = WebApplication.CreateBuilder(args);
 
     builder.Configuration.AddJsonFile("environment-configuration.json", true, true);
     builder.Logging.ClearProviders();
-    builder.Host.UseSerilog((h, l) =>
+
+    builder.Host.UseSerilog((context, l) =>
     {
-        l.ReadFrom.Configuration(h.Configuration);
+        l.ReadFrom.Configuration(context.Configuration);
         l.WriteTo.Console();
+
+        var levels = new Dictionary<string, string>();
+        context.Configuration.GetSection("Logging:LogLevel").Bind(levels);
+
+        var defaultLevel = GetLogLevel(levels.GetValueOrDefault("Default", "Warning"), LogEventLevel.Warning);
+        l.MinimumLevel.Is(defaultLevel);
+
+        foreach (var kvp in levels.Where(kvp => !"Default".Equals(kvp.Key, StringComparison.InvariantCultureIgnoreCase)))
+        {
+            l.MinimumLevel.Override(kvp.Key, GetLogLevel(kvp.Value, defaultLevel));
+        }
     });
 
     AddLettuce(builder);
@@ -33,6 +43,22 @@ try
     app
         .UseHsts()
         .UseHttpsRedirection();
+
+    if (builder.Configuration.GetValue<bool>("BlockUnSecureRequests"))
+    {
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.IsHttps)
+            {
+                await next(context);
+            }
+            else
+            {
+                context.Response.StatusCode = 400; // BadRequest
+                await context.Response.WriteAsync("Only secured connections are allowed.");
+            }
+        });
+    }
 
     app.MapGet("/.info", async context =>
     {
@@ -58,11 +84,11 @@ try
     app.MapReverseProxy();
 
     await app.RunAsync();
-    Log.Information("Started web gateway");
+    Console.WriteLine("Started web gateway");
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Application terminated unexpectedly");
+    Console.WriteLine("Application terminated unexpectedly.\n\n{0}\n\n{1}\n\n{2}", ex.Message, ex.StackTrace, ex);
 }
 finally
 {
@@ -96,3 +122,25 @@ static void AddLettuce(WebApplicationBuilder webApplicationBuilder)
 
 static string GetEnvironmentPath(string relativePath) =>
     Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, relativePath);
+
+static LogEventLevel GetLogLevel(string s, LogEventLevel @default)
+{
+    switch (s)
+    {
+        case "Trace":
+            return LogEventLevel.Verbose;
+        case "Debug":
+            return LogEventLevel.Debug;
+        case "Information":
+            return LogEventLevel.Information;
+        case "Warning":
+            return LogEventLevel.Warning;
+        case "Error":
+            return LogEventLevel.Error;
+        case "Critical":
+        case "None":
+            return LogEventLevel.Fatal;
+        default:
+            return @default;
+    }
+}
